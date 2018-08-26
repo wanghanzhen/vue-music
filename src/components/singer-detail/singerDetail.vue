@@ -7,6 +7,7 @@
 <script>
   import {mapGetters} from 'vuex'
   import {getSingerDetail} from '../../api/singer'
+  import {getSongUrl} from '../../api/song'
   import {ERR_OK} from '../../api/config'
   import {createSong} from '../../common/js/song'
   import MusicList from '../music-list/musicList.vue'
@@ -42,20 +43,24 @@
         }
         getSingerDetail(this.singer.id).then((res) => {
           if (res.code === ERR_OK) {
-            this.songs = this._normalizeSongs(res.data.list)
+            let list = res.data.list;
+            let songmidArr = list.map(item => {
+              return item.musicData.songmid;
+            })
+            getSongUrl(songmidArr).then(res => {
+              let arr = [];
+              list.forEach((item, index) => {
+                let {musicData} = item;
+                musicData.purl = res.data['req_0'].data.midurlinfo[index].purl;
+                if (musicData.songmid && musicData.albummid) {
+                  arr.push(createSong(musicData));
+                }
+              })
+              this.songs = arr;
+            })
           }
         })
       },
-      _normalizeSongs(list) {
-        let ret = [];
-        list.forEach((item) => {
-          let {musicData} = item;
-          if (musicData.songmid && musicData.albummid) {
-            ret.push(createSong(musicData));
-          }
-        })
-        return ret
-      }
     }
   }
 </script>

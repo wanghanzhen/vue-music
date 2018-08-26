@@ -13,7 +13,7 @@ export function getHotKey() {
 }
 
 export function search(query, page, zhida, perpage) {
-  const url = 'https://c.y.qq.com/soso/fcgi-bin/search_for_qq_cp';
+  const url = '/api/search';
 
   const data = Object.assign({}, commomParams, {
     uin: 0,
@@ -32,5 +32,9 @@ export function search(query, page, zhida, perpage) {
     n: perpage,
     remoteplace: 'txt.mqq.all'
   })
-  return jsonp(url, data, options);
+  return axios.get(url, {
+    params: data
+  }).then((res) => {
+    return Promise.resolve(res.data);
+  })
 }

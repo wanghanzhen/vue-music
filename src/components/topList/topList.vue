@@ -10,6 +10,7 @@
   import {getMusicList} from '../../api/rank'
   import {ERR_OK} from '../../api/config'
   import {createSong} from '../../common/js/song'
+  import {getSongUrl} from '../../api/song'
 
   export default {
     components: {
@@ -47,20 +48,24 @@
         }
         getMusicList(this.topList.id).then((res) => {
           if (res.code === ERR_OK) {
-            this.songs = this._normalizeSongs(res.songlist)
+            let list = res.songlist;
+            let songmidArr = list.map(item => {
+              return item.data.songmid;
+            })
+            getSongUrl(songmidArr).then(res => {
+              let arr = [];
+              list.forEach((item, index) => {
+                let musicData = item.data;
+                musicData.purl = res.data['req_0'].data.midurlinfo[index].purl;
+                if (musicData.songmid && musicData.albummid) {
+                  arr.push(createSong(musicData));
+                }
+              })
+              this.songs = arr;
+            })
           }
         })
       },
-      _normalizeSongs(list) {
-        let ret = [];
-        list.forEach((item) => {
-          const musicData = item.data;
-          if (musicData.albumid && musicData.songid) {
-            ret.push(createSong(musicData))
-          }
-        })
-        return ret
-      }
     }
   }
 </script>

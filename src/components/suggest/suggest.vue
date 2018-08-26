@@ -32,7 +32,7 @@
   import Loading from '../../base/loading/loading.vue'
   import Singer from '../../common/js/singer'
   import NoResult from '../../base/noResult/noResult.vue'
-
+  import {getSongUrl} from '../../api/song'
   const TYPE_SINGER = 'singer';
   const perpage = 20;
   export default {
@@ -60,10 +60,16 @@
         this.page = 1;
         this.$refs.scroll.scrollTo(0, 0);
         this.hasMore = true;
-        search(this.query, this.page, this.showSinger, perpage).then((res) => {
+        search(this.query, this.page, this.showSinger, perpage).then((res1) => {
+          let res = JSON.parse(res1.match(/callback\((.+)\)/)[1]);
+          if (res.data.song.curnum === res.data.song.totalnum) {
+            this.hasMore = false;
+          }
           if (res.code === ERR_OK) {
-            this.result = this._getResult(res.data);
-            this._checkMore(res.data);
+            this._getResult(res.data).then(data => {
+              this.result = data;
+              this._checkMore(res.data);
+            })
           }
         })
       },
@@ -72,10 +78,13 @@
           return
         }
         this.page++;
-        search(this.query, this.page, this.showSinger, perpage).then((res) => {
+        search(this.query, this.page, this.showSinger, perpage).then((res1) => {
+          let res = JSON.parse(res1.match(/callback\((.+)\)/)[1]);
           if (res.code === ERR_OK) {
-            this.result = this.result.concat(this._getResult(res.data));
-            this._checkMore(res.data);
+            this._getResult(res.data).then(data => {
+              this.result = this.result.concat(data);
+              this._checkMore(res.data);
+            })
           }
         })
       },
@@ -116,18 +125,31 @@
         this.$refs.scroll.refresh()
       },
       _checkMore(data) {
+        console.log(data);
         const song = data.song;
         if (!song.list.length && (song.curnum * song.curpage * perpage) >= song.totalnum) {
           this.hasMore = false;
         }
       },
-      _getResult(data) {
+      async _getResult(data) {
         let ret = [];
         if (data.zhida && data.zhida.singerid) {
           ret.push({...data.zhida, ...{type: TYPE_SINGER}})
         }
         if (data.song) {
-          ret = ret.concat(this._normalizeSongs(data.song.list))
+          let list = data.song.list;
+          let songmidArr = list.map(item => {
+            return item.songmid;
+          })
+          let res = await getSongUrl(songmidArr);
+          let arr = [];
+          list.forEach((musicData, index) => {
+            musicData.purl = res.data['req_0'].data.midurlinfo[index].purl;
+            if (musicData.songmid && musicData.albummid) {
+              arr.push(createSong(musicData));
+            }
+          })
+          ret = ret.concat(arr);
         }
         return ret;
       },

@@ -12,6 +12,7 @@ var webpack = require('webpack')
 var proxyMiddleware = require('http-proxy-middleware')
 var webpackConfig = require('./webpack.dev.conf')
 var axios = require('axios')
+var bodyParser = require('body-parser');
 
 // default port where dev server listens for incoming traffic
 var port = process.env.PORT || config.dev.port
@@ -22,8 +23,9 @@ var autoOpenBrowser = !!config.dev.autoOpenBrowser
 var proxyTable = config.dev.proxyTable
 
 var app = express()
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
 var compiler = webpack(webpackConfig)
-
 var apiRoutes = express.Router()
 apiRoutes.get('/getDiscList', function (req, res) {
     var url = 'https://c.y.qq.com/splcloud/fcgi-bin/fcg_get_diss_by_tag.fcg';
@@ -39,6 +41,21 @@ apiRoutes.get('/getDiscList', function (req, res) {
     }).catch((e) => {
       console.log(e);
     })
+})
+apiRoutes.get('/search', function (req, res) {
+  var url = 'https://c.y.qq.com/soso/fcgi-bin/search_for_qq_cp';
+
+  axios.get(url, {
+    headers: {
+      referer: 'https://c.y.qq.com/',
+      host: 'c.y.qq.com'
+    },
+    params: req.query
+  }).then((response) => {
+    res.send(response.data)
+  }).catch((e) => {
+    console.log(e);
+  })
 })
 apiRoutes.get('/lyric', function(req, res) {
   var url = 'https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg';
@@ -77,9 +94,9 @@ apiRoutes.get('/getSongList', function (req, res) {
     console.log(e);
   })
 })
-apiRoutes.get('/getSongUrl', function (req, res) {
+apiRoutes.post('/getSongUrl', function (req, res) {
   var url = `https://u.y.qq.com/cgi-bin/musicu.fcg?_=${+new Date()}`;
-  axios.post(url, {'req_0': JSON.parse(req.query['req_0']), 'comm': JSON.parse(req.query['comm'])}, {
+  axios.post(url, {'req_0': req.body['req_0'], 'comm': req.body['comm']}, {
     headers: {
       referer: 'https://u.y.qq.com/',
       host: 'u.y.qq.com',
